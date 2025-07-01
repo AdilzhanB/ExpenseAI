@@ -107,7 +107,26 @@ const api = {
       method: 'POST',
       body: { receiptText },
     }),
+    analyzeReceiptImage: (imageData) => api.request('/ai/analyze-receipt-image', {
+      method: 'POST',
+      body: { image_data: imageData },
+    }),
     getHealthScore: () => api.request('/ai/health-score'),
+    getSpendingPredictions: (timeframe = 'month', category = 'all') => 
+      api.request(`/ai/spending-predictions?timeframe=${timeframe}&category=${category}`),
+    getFinancialGoals: () => api.request('/ai/financial-goals'),
+    optimizeBudget: (currentBudget, goals) => api.request('/ai/optimize-budget', {
+      method: 'POST',
+      body: { current_budget: currentBudget, financial_goals: goals },
+    }),
+    chat: (message, history) => api.request('/ai/chat', {
+      method: 'POST',
+      body: { message, conversation_history: history },
+    }),
+    getTrendsAnalysis: (period = '6months') => 
+      api.request(`/ai/trends-analysis?period=${period}`),
+    getExpenseSuggestions: (location, time) => 
+      api.request(`/ai/expense-suggestions?location=${location}&time=${time}`),
   },
 };
 
@@ -557,26 +576,15 @@ export const useAIStore = create(
         }
       },
 
-      predictNextMonthSpending: async () => {
+      predictNextMonthSpending: async (timeframe = 'month', category = 'all') => {
         set({ isLoading: true, error: null });
         try {
-          const response = await api.ai.getInsights(); // Using insights endpoint for now
-          const prediction = response.data.prediction || {
-            predicted_amount: 1250.00,
-            confidence: 85,
-            explanation: "Based on your recent spending patterns and historical data."
-          };
+          const response = await api.ai.getSpendingPredictions(timeframe, category);
           set({ isLoading: false });
-          return prediction;
+          return response.data.predictions;
         } catch (error) {
           set({ error: error.message, isLoading: false });
-          // Return mock data for demo
-          const mockPrediction = {
-            predicted_amount: 1250.00,
-            confidence: 85,
-            explanation: "Based on your recent spending patterns and historical data."
-          };
-          return mockPrediction;
+          throw error;
         }
       },
 
@@ -609,6 +617,67 @@ export const useAIStore = create(
           return response;
         } catch (error) {
           console.error('Health score fetch failed:', error);
+          throw error;
+        }
+      },
+
+      getFinancialGoals: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.ai.getFinancialGoals();
+          set({ isLoading: false });
+          return response.data.goals;
+        } catch (error) {
+          set({ error: error.message, isLoading: false });
+          throw error;
+        }
+      },
+
+      optimizeBudget: async (currentBudget, goals) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.ai.optimizeBudget(currentBudget, goals);
+          set({ isLoading: false });
+          return response.data.optimizedBudget;
+        } catch (error) {
+          set({ error: error.message, isLoading: false });
+          throw error;
+        }
+      },
+
+      sendChatMessage: async (message, history = []) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.ai.chat(message, history);
+          set({ isLoading: false });
+          return response.data.response;
+        } catch (error) {
+          set({ error: error.message, isLoading: false });
+          throw error;
+        }
+      },
+
+      getTrendsAnalysis: async (period = '6months') => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.ai.getTrendsAnalysis(period);
+          set({ isLoading: false });
+          return response.data.trends;
+        } catch (error) {
+          set({ error: error.message, isLoading: false });
+          throw error;
+        }
+      },
+
+      analyzeReceiptImage: async (imageData) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.ai.analyzeReceiptImage(imageData);
+          set({ isLoading: false });
+          return response.data.extractedData;
+        } catch (error) {
+          set({ error: error.message, isLoading: false });
+          throw error;
         }
       },
 
@@ -623,7 +692,7 @@ export const useUIStore = create(
   devtools(
     (set) => ({
       theme: 'light',
-      sidebarOpen: false,
+      sidebarOpen: true, // Default to open for better UX
       activeModal: null,
       notifications: [],
 

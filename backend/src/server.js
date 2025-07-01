@@ -17,8 +17,12 @@ import budgetRoutes from './routes/budgets.js';
 import analyticsRoutes from './routes/analytics.js';
 import aiRoutes from './routes/ai.js';
 import uploadRoutes from './routes/upload.js';
+import aiService from './services/aiService.js';
 
 dotenv.config();
+
+// Initialize AI service after environment variables are loaded
+aiService.init();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

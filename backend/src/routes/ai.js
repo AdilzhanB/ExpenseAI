@@ -6,7 +6,6 @@ import database from '../database/init.js';
 
 const router = express.Router();
 
-// All AI routes require authentication
 router.use(authenticateToken);
 
 // Analyze expense with AI
@@ -197,6 +196,94 @@ router.get('/cached-insights/:type', asyncHandler(async (req, res) => {
       cached_at: insights.created_at,
       expires_at: insights.expires_at
     }
+  });
+}));
+
+// Generate financial goals
+router.get('/financial-goals', asyncHandler(async (req, res) => {
+  const goals = await aiService.generateFinancialGoals(req.user.id);
+
+  res.json({
+    success: true,
+    data: { goals }
+  });
+}));
+
+// Smart budget optimization
+router.post('/optimize-budget', asyncHandler(async (req, res) => {
+  const { current_budget, financial_goals } = req.body;
+
+  // Get user's expense data for context
+  const expenses = await database.all(`
+    SELECT e.*, c.name as category 
+    FROM expenses e 
+    JOIN categories c ON e.category_id = c.id 
+    WHERE e.user_id = ? 
+    ORDER BY e.date DESC 
+    LIMIT 100
+  `, [req.user.id]);
+
+  const optimizedBudget = await aiService.optimizeBudget(expenses, current_budget, financial_goals);
+
+  res.json({
+    success: true,
+    data: { optimizedBudget }
+  });
+}));
+
+// AI chat conversation
+router.post('/chat', asyncHandler(async (req, res) => {
+  const { message, conversation_history } = req.body;
+
+  if (!message) {
+    throw new AppError('Message is required', 400);
+  }
+
+  // Get user's financial context
+  const userContext = await aiService.getUserFinancialContext(req.user.id);
+  
+  const response = await aiService.generateChatResponse(message, conversation_history, userContext);
+
+  res.json({
+    success: true,
+    data: { response }
+  });
+}));
+
+// Upload and analyze receipt image
+router.post('/analyze-receipt-image', asyncHandler(async (req, res) => {
+  const { image_data } = req.body;
+
+  if (!image_data) {
+    throw new AppError('Image data is required', 400);
+  }
+
+  try {
+    // Convert base64 to buffer
+    const base64Data = image_data.replace(/^data:image\/[a-z]+;base64,/, '');
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+    
+    const extractedData = await aiService.analyzeReceiptImage(imageBuffer);
+
+    res.json({
+      success: true,
+      data: { extractedData }
+    });
+  } catch (error) {
+    console.error('Receipt image analysis error:', error);
+    throw new AppError('Failed to analyze receipt image', 500);
+  }
+}));
+
+// Get financial trends analysis
+router.get('/trends-analysis', asyncHandler(async (req, res) => {
+  const { period = '6months' } = req.query;
+
+  const trends = await aiService.analyzeTrends(req.user.id, period);
+
+  res.json({
+    success: true,
+    data: { trends }
   });
 }));
 

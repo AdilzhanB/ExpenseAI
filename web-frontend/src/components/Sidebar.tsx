@@ -11,7 +11,12 @@ import {
   Plus,
   Sparkles,
   User,
-  MessageSquare
+  MessageSquare,
+  Heart,
+  Target,
+  Scan,
+  TrendingUp,
+  Calculator
 } from 'lucide-react';
 import { useAuthStore, useUIStore } from '../store';
 
@@ -26,6 +31,17 @@ const Sidebar: React.FC = () => {
     { id: 'analytics', label: 'Analytics', icon: BarChart3, color: 'text-purple-600', path: '/analytics' },
     { id: 'ai-insights', label: 'AI Insights', icon: Brain, color: 'text-pink-600', path: '/ai-insights' },
     { id: 'ai-chat', label: 'AI Chat', icon: MessageSquare, color: 'text-indigo-600', path: '/ai-chat' },
+  ];
+
+  const aiPages = [
+    { id: 'ai-advisor', label: 'AI Financial Advisor', icon: Sparkles, color: 'text-yellow-600', path: '/ai-advisor' },
+    { id: 'budget-planner', label: 'Smart Budget Planner', icon: Calculator, color: 'text-emerald-600', path: '/budget-planner' },
+    { id: 'receipt-scanner', label: 'Receipt Scanner', icon: Scan, color: 'text-cyan-600', path: '/receipt-scanner' },
+    { id: 'health-dashboard', label: 'Financial Health', icon: Heart, color: 'text-red-600', path: '/health-dashboard' },
+    { id: 'predictions', label: 'Expense Predictions', icon: TrendingUp, color: 'text-violet-600', path: '/predictions' },
+  ];
+
+  const settingsItems = [
     { id: 'profile', label: 'Profile', icon: User, color: 'text-orange-600', path: '/profile' },
     { id: 'settings', label: 'Settings', icon: Settings, color: 'text-slate-600', path: '/settings' },
   ];
@@ -91,47 +107,148 @@ const Sidebar: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-6">
-        <ul className="space-y-2">
-          {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            const Icon = item.icon;
+      <nav className="flex-1 p-6 overflow-y-auto">
+        {/* Main Menu */}
+        <div className="mb-6">
+          <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+            Main
+          </h3>
+          <ul className="space-y-2">
+            {menuItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              const Icon = item.icon;
 
-            return (
-              <li key={item.id}>
-                <NavLink
-                  to={item.path}
-                  onClick={() => setSidebarOpen(false)}
-                  className={({ isActive }) =>
-                    `w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                      isActive
-                        ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-700 dark:text-blue-300 shadow-lg border border-blue-200 dark:border-blue-800'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
-                    }`
-                  }
-                >
-                  <motion.div
-                    whileHover={{ scale: 1.02, x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full flex items-center space-x-3"
+              return (
+                <li key={item.id}>
+                  <NavLink
+                    to={item.path}
+                    onClick={() => setSidebarOpen(false)}
+                    className={({ isActive }) =>
+                      `w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-700 dark:text-blue-300 shadow-lg border border-blue-200 dark:border-blue-800'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
+                      }`
+                    }
                   >
-                    <Icon 
-                      className={`w-5 h-5 ${isActive ? item.color : 'text-slate-500 dark:text-slate-400'}`} 
-                    />
-                    <span className="font-medium">{item.label}</span>
-                    
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeIndicator"
-                        className="ml-auto w-2 h-2 bg-blue-500 rounded-full"
+                    <motion.div
+                      whileHover={{ scale: 1.02, x: 4 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full flex items-center space-x-3"
+                    >
+                      <Icon 
+                        className={`w-5 h-5 ${isActive ? item.color : 'text-slate-500 dark:text-slate-400'}`} 
                       />
-                    )}
-                  </motion.div>
-                </NavLink>
-              </li>
-            );
-          })}
-        </ul>
+                      <span className="font-medium">{item.label}</span>
+                      
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeIndicator"
+                          className="ml-auto w-2 h-2 bg-blue-500 rounded-full"
+                        />
+                      )}
+                    </motion.div>
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        {/* AI-Powered Features */}
+        <div className="mb-6">
+          <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 flex items-center">
+            <Sparkles className="w-3 h-3 mr-1" />
+            AI Features
+          </h3>
+          <ul className="space-y-2">
+            {aiPages.map((item) => {
+              const isActive = location.pathname === item.path;
+              const Icon = item.icon;
+
+              return (
+                <li key={item.id}>
+                  <NavLink
+                    to={item.path}
+                    onClick={() => setSidebarOpen(false)}
+                    className={({ isActive }) =>
+                      `w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-700 dark:text-purple-300 shadow-lg border border-purple-200 dark:border-purple-800'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
+                      }`
+                    }
+                  >
+                    <motion.div
+                      whileHover={{ scale: 1.02, x: 4 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full flex items-center space-x-3"
+                    >
+                      <Icon 
+                        className={`w-5 h-5 ${isActive ? item.color : 'text-slate-500 dark:text-slate-400'}`} 
+                      />
+                      <span className="font-medium text-sm">{item.label}</span>
+                      
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeIndicatorAI"
+                          className="ml-auto w-2 h-2 bg-purple-500 rounded-full"
+                        />
+                      )}
+                    </motion.div>
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        {/* Settings */}
+        <div>
+          <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+            Account
+          </h3>
+          <ul className="space-y-2">
+            {settingsItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              const Icon = item.icon;
+
+              return (
+                <li key={item.id}>
+                  <NavLink
+                    to={item.path}
+                    onClick={() => setSidebarOpen(false)}
+                    className={({ isActive }) =>
+                      `w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-700 dark:text-orange-300 shadow-lg border border-orange-200 dark:border-orange-800'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
+                      }`
+                    }
+                  >
+                    <motion.div
+                      whileHover={{ scale: 1.02, x: 4 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full flex items-center space-x-3"
+                    >
+                      <Icon 
+                        className={`w-5 h-5 ${isActive ? item.color : 'text-slate-500 dark:text-slate-400'}`} 
+                      />
+                      <span className="font-medium">{item.label}</span>
+                      
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeIndicatorSettings"
+                          className="ml-auto w-2 h-2 bg-orange-500 rounded-full"
+                        />
+                      )}
+                    </motion.div>
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </nav>
 
       {/* Footer */}

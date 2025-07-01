@@ -16,6 +16,11 @@ import AuthModal from './components/AuthModal';
 import AddExpenseModal from './components/AddExpenseModal';
 import NotificationContainer from './components/NotificationContainer';
 import LoadingScreen from './components/LoadingScreen';
+import AIFinancialAdvisor from './pages/AIFinancialAdvisor';
+import SmartBudgetPlanner from './pages/SmartBudgetPlanner';
+import SmartReceiptScanner from './pages/SmartReceiptScanner';
+import FinancialHealthDashboard from './pages/FinancialHealthDashboard';
+import ExpensePredictionCenter from './pages/ExpensePredictionCenter';
 import './App.css';
 
 const App: React.FC = () => {
@@ -45,7 +50,12 @@ const App: React.FC = () => {
     <Router>
       <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''}`}>
         <div className="flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 min-h-screen">
-          {/* Sidebar */}
+          {/* Sidebar - Always visible on desktop, toggleable on mobile */}
+          <div className="hidden lg:block">
+            <Sidebar />
+          </div>
+          
+          {/* Mobile Sidebar Overlay */}
           <AnimatePresence>
             {sidebarOpen && (
               <motion.div
@@ -53,7 +63,7 @@ const App: React.FC = () => {
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -300, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className="fixed lg:relative z-30"
+                className="fixed lg:hidden z-30"
               >
                 <Sidebar />
               </motion.div>
@@ -144,6 +154,61 @@ const App: React.FC = () => {
                     className="h-full"
                   >
                     <Settings />
+                  </motion.div>
+                } />
+                <Route path="/ai-advisor" element={
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="h-full"
+                  >
+                    <AIFinancialAdvisor />
+                  </motion.div>
+                } />
+                <Route path="/budget-planner" element={
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="h-full"
+                  >
+                    <SmartBudgetPlanner />
+                  </motion.div>
+                } />
+                <Route path="/receipt-scanner" element={
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="h-full"
+                  >
+                    <SmartReceiptScanner />
+                  </motion.div>
+                } />
+                <Route path="/health-dashboard" element={
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="h-full"
+                  >
+                    <FinancialHealthDashboard />
+                  </motion.div>
+                } />
+                <Route path="/predictions" element={
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="h-full"
+                  >
+                    <ExpensePredictionCenter />
                   </motion.div>
                 } />
               </Routes>

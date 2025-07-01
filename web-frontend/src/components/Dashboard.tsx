@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   TrendingUp, 
@@ -13,7 +14,8 @@ import {
   Sparkles,
   CreditCard,
   Wallet,
-  ShoppingBag
+  ShoppingBag,
+  BarChart3
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -31,38 +33,106 @@ import {
   BarChart,
   Bar
 } from 'recharts';
-import { useExpenseStore, useCategoryStore, useAIStore } from '../store';
+import { useExpenseStore, useCategoryStore, useAIStore, useUIStore } from '../store';
 
 const Dashboard: React.FC = () => {
-  const { fetchStats, totalAmount, categoryBreakdown } = useExpenseStore();
+  const navigate = useNavigate();
+  const { fetchStats, fetchExpenses, totalAmount, categoryBreakdown, expenses } = useExpenseStore();
   const { fetchCategories } = useCategoryStore();
   const { getSpendingInsights, fetchHealthScore, insights, healthScore } = useAIStore();
+  const { setActiveModal, addNotification } = useUIStore();
   const [timeframe, setTimeframe] = useState('month');
+  const [stats, setStats] = useState({
+    totalSpending: 0,
+    budgetRemaining: 0,
+    transactionCount: 0,
+    recentTransactions: []
+  });
 
   useEffect(() => {
-    fetchStats(timeframe);
-    fetchCategories();
-    getSpendingInsights();
-    fetchHealthScore();
+    const loadDashboardData = async () => {
+      try {
+        // Fetch stats and expenses
+        await fetchStats(timeframe);
+        const expensesResponse = await fetchExpenses({ limit: 5 }); // Get recent 5 expenses
+        await fetchCategories();
+        await getSpendingInsights();
+        await fetchHealthScore();
+
+        // Calculate real stats
+        const transactionCount = expenses ? expenses.length : 0;
+        setStats({
+          totalSpending: totalAmount || 0,
+          budgetRemaining: Math.max(0, 3000 - (totalAmount || 0)), // Default budget of $3000
+          transactionCount,
+          recentTransactions: expenses ? expenses.slice(0, 4) : []
+        });
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+      }
+    };
+
+    loadDashboardData();
   }, [timeframe]);
 
-  // Mock data for demo - in real app this would come from API
-  const trendData = [
-    { name: 'Jan', amount: 1200, budget: 1500 },
-    { name: 'Feb', amount: 1350, budget: 1500 },
-    { name: 'Mar', amount: 980, budget: 1500 },
-    { name: 'Apr', amount: 1600, budget: 1500 },
-    { name: 'May', amount: 1420, budget: 1500 },
-    { name: 'Jun', amount: 1180, budget: 1500 },
-  ];
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'Add Expense':
+        setActiveModal('add-expense');
+        break;
+      case 'Set Budget':
+        navigate('/budget-planner');
+        addNotification({
+          type: 'info',
+          title: 'Budget Planner',
+          message: 'Redirected to Smart Budget Planner for AI-powered budget optimization.'
+        });
+        break;
+      case 'AI Analysis':
+        navigate('/health-dashboard');
+        addNotification({
+          type: 'info',
+          title: 'AI Analysis',
+          message: 'Redirected to Financial Health Dashboard for comprehensive AI analysis.'
+        });
+        break;
+      case 'Schedule':
+        navigate('/predictions');
+        addNotification({
+          type: 'info',
+          title: 'Financial Planning',
+          message: 'Redirected to Expense Predictions for future planning insights.'
+        });
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleViewAllTransactions = () => {
+    navigate('/expenses');
+    addNotification({
+      type: 'info',
+      title: 'Expense History',
+      message: 'Viewing all your expenses and transactions.'
+    });
+  };
+
+  // Create chart data from actual data or show empty state
+  const hasData = totalAmount > 0 || (categoryBreakdown && categoryBreakdown.length > 0);
+  
+  const trendData = hasData ? [
+    { name: 'Last Week', amount: totalAmount * 0.8, budget: totalAmount * 1.2 },
+    { name: 'This Week', amount: totalAmount, budget: totalAmount * 1.2 },
+  ] : [];
 
   const pieColors = ['#3B82F6', '#8B5CF6', '#EF4444', '#10B981', '#F59E0B', '#EC4899'];
 
-  const pieData = categoryBreakdown?.map((cat: any, index: number) => ({
+  const pieData = hasData && categoryBreakdown ? categoryBreakdown.map((cat: any, index: number) => ({
     name: cat.name,
     value: cat.total,
-    color: pieColors[index % pieColors.length]
-  })) || [];
+    fill: pieColors[index % pieColors.length]
+  })) : [];
 
   const StatCard = ({ title, value, change, icon: Icon, color, trend }: any) => (
     <motion.div
@@ -145,35 +215,35 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Spending"
-          value={`$${totalAmount?.toFixed(2) || '0.00'}`}
-          change="12% from last month"
+          value={`$${stats.totalSpending.toFixed(2)}`}
+          change={stats.totalSpending > 0 ? "Updated today" : "No spending yet"}
           icon={DollarSign}
           color="bg-gradient-to-br from-blue-500 to-blue-600"
-          trend="up"
+          trend={stats.totalSpending > 0 ? "up" : null}
         />
         <StatCard
           title="Budget Remaining"
-          value="$750.00"
-          change="25% remaining"
+          value={`$${stats.budgetRemaining.toFixed(2)}`}
+          change={stats.budgetRemaining > 0 ? `${((stats.budgetRemaining / 3000) * 100).toFixed(0)}% remaining` : "Budget exceeded"}
           icon={Target}
           color="bg-gradient-to-br from-green-500 to-green-600"
-          trend="down"
+          trend={stats.budgetRemaining > 0 ? "up" : "down"}
         />
         <StatCard
           title="Transactions"
-          value="42"
-          change="8 more than last month"
+          value={stats.transactionCount.toString()}
+          change={stats.transactionCount > 0 ? `${stats.transactionCount} this ${timeframe}` : "No transactions"}
           icon={CreditCard}
           color="bg-gradient-to-br from-purple-500 to-purple-600"
-          trend="up"
+          trend={stats.transactionCount > 0 ? "up" : null}
         />
         <StatCard
           title="AI Health Score"
-          value={`${healthScore?.overall || 85}/100`}
-          change="Excellent"
+          value={`${healthScore?.overall || 0}/100`}
+          change={healthScore?.overall >= 80 ? "Excellent" : healthScore?.overall >= 60 ? "Good" : "Needs Improvement"}
           icon={Brain}
           color="bg-gradient-to-br from-pink-500 to-pink-600"
-          trend="up"
+          trend={healthScore?.overall >= 70 ? "up" : "down"}
         />
       </div>
 
@@ -196,42 +266,50 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={trendData}>
-              <defs>
-                <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-              <XAxis dataKey="name" stroke="#64748B" />
-              <YAxis stroke="#64748B" />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)', 
-                  border: 'none', 
-                  borderRadius: '12px',
-                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
-                }} 
-              />
-              <Area 
-                type="monotone" 
-                dataKey="amount" 
-                stroke="#3B82F6" 
-                strokeWidth={3}
-                fillOpacity={1} 
-                fill="url(#colorAmount)" 
-              />
-              <Line 
-                type="monotone" 
-                dataKey="budget" 
-                stroke="#EF4444" 
-                strokeWidth={2}
-                strokeDasharray="5 5"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          {hasData ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={trendData}>
+                <defs>
+                  <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis dataKey="name" stroke="#64748B" />
+                <YAxis stroke="#64748B" />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)', 
+                    border: 'none', 
+                    borderRadius: '12px',
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+                  }} 
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="amount" 
+                  stroke="#3B82F6" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorAmount)" 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="budget" 
+                  stroke="#EF4444" 
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex flex-col items-center justify-center text-gray-500">
+              <BarChart3 className="w-16 h-16 mb-4 opacity-50" />
+              <p className="text-lg font-medium mb-2">No spending data available</p>
+              <p className="text-sm text-center">You haven't added any expenses yet.<br />Start tracking your finances to see trends!</p>
+            </div>
+          )}
         </motion.div>
 
         {/* Category Breakdown */}
@@ -261,7 +339,7 @@ const Dashboard: React.FC = () => {
                 dataKey="value"
               >
                 {pieData.map((entry: any, index: number) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
               </Pie>
               <Tooltip 
@@ -281,7 +359,7 @@ const Dashboard: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <div 
                     className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: item.color }}
+                    style={{ backgroundColor: item.fill }}
                   />
                   <span className="text-sm text-slate-700">{item.name}</span>
                 </div>
@@ -308,8 +386,19 @@ const Dashboard: React.FC = () => {
             <h3 className="text-lg font-semibold text-slate-900">AI Insights</h3>
           </div>
           
-          <AIInsightCard insight={insights?.recommendations?.[0]} />
-          <AIInsightCard insight="You're spending 15% more on dining out compared to last month. Consider meal planning to save money." />
+          {insights?.recommendations && insights.recommendations.length > 0 ? (
+            <>
+              <AIInsightCard insight={insights.recommendations[0]} />
+              {insights.recommendations[1] && (
+                <AIInsightCard insight={insights.recommendations[1]} />
+              )}
+            </>
+          ) : (
+            <>
+              <AIInsightCard insight="Start tracking your expenses to get personalized AI insights and recommendations." />
+              <AIInsightCard insight="Add your first expense to begin your financial journey with AI-powered analysis." />
+            </>
+          )}
         </motion.div>
 
         {/* Recent Transactions Preview */}
@@ -323,6 +412,7 @@ const Dashboard: React.FC = () => {
             <h3 className="text-lg font-semibold text-slate-900">Recent Activity</h3>
             <motion.button
               whileHover={{ scale: 1.05 }}
+              onClick={handleViewAllTransactions}
               className="text-blue-600 hover:text-blue-700 text-sm font-medium"
             >
               View All
@@ -330,33 +420,41 @@ const Dashboard: React.FC = () => {
           </div>
           
           <div className="space-y-4">
-            {[
-              { name: 'Grocery Store', amount: -85.50, category: '🛒', time: '2 hours ago' },
-              { name: 'Coffee Shop', amount: -12.99, category: '☕', time: '5 hours ago' },
-              { name: 'Salary Deposit', amount: 3200.00, category: '💰', time: '1 day ago' },
-              { name: 'Gas Station', amount: -45.20, category: '⛽', time: '2 days ago' },
-            ].map((transaction, index) => (
-              <motion.div
-                key={index}
-                whileHover={{ x: 4 }}
-                className="flex items-center justify-between p-3 hover:bg-white/50 rounded-xl transition-all"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-lg">
-                    {transaction.category}
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-900">{transaction.name}</p>
-                    <p className="text-xs text-slate-600">{transaction.time}</p>
-                  </div>
-                </div>
-                <span className={`font-bold ${
-                  transaction.amount > 0 ? 'text-green-600' : 'text-slate-900'
-                }`}>
-                  {transaction.amount > 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
-                </span>
-              </motion.div>
-            ))}
+            {stats.recentTransactions.length > 0 ? (
+              stats.recentTransactions.map((transaction: any, index: number) => {
+                const timeAgo = new Date(transaction.date || transaction.created_at).toLocaleDateString();
+                return (
+                  <motion.div
+                    key={transaction.id || index}
+                    whileHover={{ x: 4 }}
+                    className="flex items-center justify-between p-3 hover:bg-white/50 rounded-xl transition-all"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-lg">
+                        {transaction.category_name === 'Food' ? '🍽️' : 
+                         transaction.category_name === 'Transport' ? '🚗' :
+                         transaction.category_name === 'Shopping' ? '🛒' :
+                         transaction.category_name === 'Entertainment' ? '🎉' :
+                         transaction.category_name === 'Bills' ? '📄' : '💰'}
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">{transaction.description}</p>
+                        <p className="text-xs text-slate-600">{timeAgo}</p>
+                      </div>
+                    </div>
+                    <span className="font-bold text-slate-900">
+                      -${parseFloat(transaction.amount).toFixed(2)}
+                    </span>
+                  </motion.div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">No recent transactions</p>
+                <p className="text-sm">Your recent expenses will appear here</p>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
@@ -372,19 +470,21 @@ const Dashboard: React.FC = () => {
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { icon: Wallet, label: 'Add Expense', color: 'from-blue-500 to-blue-600' },
-            { icon: Target, label: 'Set Budget', color: 'from-green-500 to-green-600' },
-            { icon: Brain, label: 'AI Analysis', color: 'from-purple-500 to-purple-600' },
-            { icon: Calendar, label: 'Schedule', color: 'from-pink-500 to-pink-600' },
+            { icon: Wallet, label: 'Add Expense', color: 'from-blue-500 to-blue-600', description: 'Quick expense entry' },
+            { icon: Target, label: 'Set Budget', color: 'from-green-500 to-green-600', description: 'AI budget planning' },
+            { icon: Brain, label: 'AI Analysis', color: 'from-purple-500 to-purple-600', description: 'Financial health check' },
+            { icon: Calendar, label: 'Schedule', color: 'from-pink-500 to-pink-600', description: 'Future predictions' },
           ].map((action, index) => (
             <motion.button
               key={index}
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
-              className={`p-4 bg-gradient-to-br ${action.color} text-white rounded-xl shadow-lg hover:shadow-xl transition-all`}
+              onClick={() => handleQuickAction(action.label)}
+              className={`p-4 bg-gradient-to-br ${action.color} text-white rounded-xl shadow-lg hover:shadow-xl transition-all group`}
             >
-              <action.icon className="w-6 h-6 mx-auto mb-2" />
+              <action.icon className="w-6 h-6 mx-auto mb-2 group-hover:scale-110 transition-transform" />
               <p className="text-sm font-medium">{action.label}</p>
+              <p className="text-xs opacity-80 mt-1">{action.description}</p>
             </motion.button>
           ))}
         </div>

@@ -222,12 +222,46 @@ export async function initDatabase() {
     )
   `);
 
+  // Income tracking table
+  await database.run(`
+    CREATE TABLE IF NOT EXISTS income (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      amount DECIMAL(10, 2) NOT NULL,
+      source TEXT NOT NULL,
+      description TEXT,
+      date DATE NOT NULL,
+      is_recurring BOOLEAN DEFAULT 0,
+      frequency TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    )
+  `);
+
+  // Savings tracking table
+  await database.run(`
+    CREATE TABLE IF NOT EXISTS savings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      goal_id INTEGER,
+      amount DECIMAL(10, 2) NOT NULL,
+      description TEXT,
+      date DATE NOT NULL,
+      account_type TEXT DEFAULT 'savings',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (goal_id) REFERENCES financial_goals (id) ON DELETE SET NULL
+    )
+  `);
+
   // Create indexes for better performance
   await database.run('CREATE INDEX IF NOT EXISTS idx_expenses_user_date ON expenses(user_id, date)');
   await database.run('CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category_id)');
   await database.run('CREATE INDEX IF NOT EXISTS idx_budgets_user ON budgets(user_id)');
   await database.run('CREATE INDEX IF NOT EXISTS idx_ai_insights_user ON ai_insights(user_id)');
   await database.run('CREATE INDEX IF NOT EXISTS idx_goals_user ON financial_goals(user_id)');
+  await database.run('CREATE INDEX IF NOT EXISTS idx_income_user ON income(user_id)');
+  await database.run('CREATE INDEX IF NOT EXISTS idx_savings_user ON savings(user_id)');
 
   // Insert default categories if they don't exist
   await insertDefaultCategories();

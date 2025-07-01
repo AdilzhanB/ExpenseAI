@@ -524,25 +524,8 @@ export const useAIStore = create(
           return response.data.recommendations;
         } catch (error) {
           set({ error: error.message, isLoading: false });
-          // Return mock data for demo
-          const mockRecommendations = {
-            suggestions: [
-              {
-                category: "Food & Dining",
-                recommendation: "Reduce dining out by 20% to save $80/month",
-                current: 400,
-                suggested: 320
-              },
-              {
-                category: "Entertainment",
-                recommendation: "Set a monthly limit of $150 for entertainment expenses",
-                current: 220,
-                suggested: 150
-              }
-            ]
-          };
-          set({ budgetRecommendations: mockRecommendations, isLoading: false });
-          return mockRecommendations;
+          console.error('Budget recommendations failed:', error);
+          return null;
         }
       },
 
@@ -554,25 +537,8 @@ export const useAIStore = create(
           return response.data.opportunities;
         } catch (error) {
           set({ error: error.message, isLoading: false });
-          // Return mock data for demo
-          const mockOpportunities = {
-            opportunities: [
-              {
-                title: "Subscription Optimization",
-                description: "Cancel unused streaming services to reduce monthly expenses",
-                potential_savings: 35.99,
-                frequency: "month"
-              },
-              {
-                title: "Grocery Savings",
-                description: "Shopping at discount stores could save money on weekly groceries",
-                potential_savings: 25.00,
-                frequency: "week"
-              }
-            ]
-          };
-          set({ savingsOpportunities: mockOpportunities, isLoading: false });
-          return mockOpportunities;
+          console.error('Savings opportunities failed:', error);
+          return null;
         }
       },
 
@@ -653,18 +619,7 @@ export const useAIStore = create(
           return response.data.response;
         } catch (error) {
           set({ error: error.message, isLoading: false });
-          throw error;
-        }
-      },
-
-      getTrendsAnalysis: async (period = '6months') => {
-        set({ isLoading: true, error: null });
-        try {
-          const response = await api.ai.getTrendsAnalysis(period);
-          set({ isLoading: false });
-          return response.data.trends;
-        } catch (error) {
-          set({ error: error.message, isLoading: false });
+          console.error('Chat failed:', error);
           throw error;
         }
       },
@@ -677,6 +632,7 @@ export const useAIStore = create(
           return response.data.extractedData;
         } catch (error) {
           set({ error: error.message, isLoading: false });
+          console.error('Receipt image analysis failed:', error);
           throw error;
         }
       },

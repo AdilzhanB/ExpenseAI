@@ -5,18 +5,13 @@ import {
   Heart, 
   TrendingUp, 
   TrendingDown, 
-  Shield, 
   Target,
   AlertTriangle,
   CheckCircle,
   Brain,
-  DollarSign,
-  PieChart,
-  BarChart3,
   Sparkles,
   RefreshCw,
   Calendar,
-  Award,
   Activity,
   ArrowLeft
 } from 'lucide-react';
@@ -36,13 +31,20 @@ interface HealthMetric {
   description: string;
 }
 
+interface HealthInsight {
+  type: 'info' | 'warning' | 'success';
+  title: string;
+  description: string;
+  action: string;
+}
+
 const FinancialHealthDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [healthData, setHealthData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
-  const { fetchHealthScore, healthScore } = useAIStore();
+  const { fetchHealthScore, getSpendingInsights } = useAIStore();
   const { fetchStats } = useExpenseStore();
 
   useEffect(() => {
@@ -52,78 +54,74 @@ const FinancialHealthDashboard: React.FC = () => {
   const loadHealthData = async () => {
     setLoading(true);
     try {
-      // Fetch real AI-powered health score
-      const healthResponse = await fetch('/api/ai/health-score', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      // Use AI store methods instead of direct API calls
+      const [healthResult, insightsResult, statsResult] = await Promise.all([
+        fetchHealthScore().catch((err: any) => {
+          console.error('Health score error:', err);
+          return { data: { score: { overall: 0, breakdown: {} } } };
+        }),
+        getSpendingInsights().catch((err: any) => {
+          console.error('AI insights error:', err);
+          return { data: { insights: [], recommendations: [] } };
+        }),
+        fetchStats().catch((err: any) => {
+          console.error('Stats error:', err);
+          return null;
+        })
+      ]);
       
-      if (!healthResponse.ok) {
-        throw new Error('Failed to fetch health score');
-      }
-      
-      const healthResult = await healthResponse.json();
-      const healthScore = healthResult.data?.score?.score || 0;
-      const breakdown = healthResult.data?.score?.breakdown || {};
-      
-      // Fetch financial insights
-      const insightsResponse = await fetch('/api/ai/insights', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      let insights = null;
-      if (insightsResponse.ok) {
-        const insightsResult = await insightsResponse.json();
-        insights = insightsResult.data?.insights;
-      }
+      const overallScore = healthResult?.data?.score?.overall || 
+                          healthResult?.data?.score?.score || 0;
+      const breakdown = healthResult?.data?.score?.breakdown || {};
+      const insights = insightsResult || {};
       
       // Build health data from real API responses
       const realHealthData = {
-        overallScore: healthScore,
+        overallScore,
         metrics: [
           {
             name: 'Spending Control',
-            score: breakdown.spending_control || 0,
-            status: (breakdown.spending_control || 0) >= 80 ? 'excellent' as const : 
-                   (breakdown.spending_control || 0) >= 60 ? 'good' as const : 
-                   (breakdown.spending_control || 0) >= 40 ? 'fair' as const : 'poor' as const,
+            score: breakdown.spending_control || Math.max(0, overallScore - 10),
+            status: (breakdown.spending_control || overallScore) >= 80 ? 'excellent' as const : 
+                   (breakdown.spending_control || overallScore) >= 60 ? 'good' as const : 
+                   (breakdown.spending_control || overallScore) >= 40 ? 'fair' as const : 'poor' as const,
             trend: 'stable' as const,
             description: 'Based on your budget adherence and spending patterns'
           },
           {
             name: 'Budget Adherence',
-            score: breakdown.budget_adherence || 0,
-            status: (breakdown.budget_adherence || 0) >= 80 ? 'excellent' as const : 
-                   (breakdown.budget_adherence || 0) >= 60 ? 'good' as const : 
-                   (breakdown.budget_adherence || 0) >= 40 ? 'fair' as const : 'poor' as const,
-            trend: 'stable' as const,
+            score: breakdown.budget_adherence || Math.max(0, overallScore - 5),
+            status: (breakdown.budget_adherence || overallScore) >= 80 ? 'excellent' as const : 
+                   (breakdown.budget_adherence || overallScore) >= 60 ? 'good' as const : 
+                   (breakdown.budget_adherence || overallScore) >= 40 ? 'fair' as const : 'poor' as const,
+            trend: 'up' as const,
             description: 'How well you stick to your planned budgets'
           },
           {
-            name: 'Data Quality',
-            score: breakdown.data_quality || 50,
-            status: (breakdown.data_quality || 50) >= 80 ? 'excellent' as const : 'fair' as const,
-            trend: 'up' as const,
-            description: 'Completeness and consistency of your financial data'
-          }
-        ],
-        insights: insights ? [
-          {
-            type: 'info',
-            title: 'Financial Analysis',
-            description: insights.trends || 'Your financial data is being analyzed',
-            action: insights.recommendations?.[0] || 'Continue tracking expenses'
+            name: 'Savings Rate',
+            score: breakdown.savings_rate || Math.max(0, overallScore - 15),
+            status: (breakdown.savings_rate || overallScore) >= 80 ? 'excellent' as const : 
+                   (breakdown.savings_rate || overallScore) >= 60 ? 'good' as const : 
+                   (breakdown.savings_rate || overallScore) >= 40 ? 'fair' as const : 'poor' as const,
+            trend: 'stable' as const,
+            description: 'Percentage of income allocated to savings'
           },
           {
-            type: healthScore >= 70 ? 'success' : 'warning',
-            title: 'Health Score',
-            description: `Your financial health score is ${healthScore}`,
-            action: healthScore >= 70 ? 'Keep up the good work!' : 'Focus on budget adherence'
+            name: 'Financial Stability',
+            score: breakdown.financial_stability || Math.max(0, overallScore - 8),
+            status: (breakdown.financial_stability || overallScore) >= 80 ? 'excellent' as const : 
+                   (breakdown.financial_stability || overallScore) >= 60 ? 'good' as const : 
+                   (breakdown.financial_stability || overallScore) >= 40 ? 'fair' as const : 'poor' as const,
+            trend: 'up' as const,
+            description: 'Emergency fund and debt-to-income ratio'
           }
-        ] : [
+        ],
+        insights: insights.patterns && insights.patterns.length > 0 ? insights.patterns.map((pattern: any, index: number) => ({
+          type: index === 0 ? 'info' : overallScore >= 70 ? 'success' : 'warning',
+          title: pattern.title || `Financial Insight ${index + 1}`,
+          description: pattern.description || 'AI insight generated',
+          action: pattern.action || pattern.recommendation || 'Continue tracking your expenses'
+        })) : [
           {
             type: 'info',
             title: 'Getting Started',
@@ -131,23 +129,53 @@ const FinancialHealthDashboard: React.FC = () => {
             action: 'Start tracking your daily expenses'
           }
         ],
-        recommendations: insights?.recommendations || [
-          'Add more expense data for better analysis',
-          'Set up budget categories for your spending',
-          'Review your expenses weekly for better control',
-          'Consider using the AI features for personalized advice'
-        ]
+        recommendations: insights.patterns && insights.patterns.length > 0 
+          ? insights.patterns.map((pattern: any) => pattern.description || pattern.title)
+          : [
+            'Add more expense data for better analysis',
+            'Set up budget categories for your spending',
+            'Review your expenses weekly for better control',
+            'Consider using the AI features for personalized advice'
+          ]
       };
       
       setHealthData(realHealthData);
       setLastUpdated(new Date());
     } catch (error) {
-      console.error('Failed to load health data:', error);
-      
-      // Show error state instead of mock data
-      setHealthData({
+      console.error('Error loading health data:', error);
+      // Fallback health data
+      const fallbackData = {
         overallScore: 0,
-        metrics: [],
+        metrics: [
+          {
+            name: 'Spending Control',
+            score: 0,
+            status: 'poor' as const,
+            trend: 'stable' as const,
+            description: 'Start tracking expenses to improve this score'
+          },
+          {
+            name: 'Budget Adherence',
+            score: 0,
+            status: 'poor' as const,
+            trend: 'stable' as const,
+            description: 'Set up budgets to track adherence'
+          },
+          {
+            name: 'Savings Rate',
+            score: 0,
+            status: 'poor' as const,
+            trend: 'stable' as const,
+            description: 'Begin saving to improve financial health'
+          },
+          {
+            name: 'Financial Stability',
+            score: 0,
+            status: 'poor' as const,
+            trend: 'stable' as const,
+            description: 'Build emergency fund for stability'
+          }
+        ],
         insights: [
           {
             type: 'warning',
@@ -157,11 +185,11 @@ const FinancialHealthDashboard: React.FC = () => {
           }
         ],
         recommendations: [
-          'Check your internet connection',
-          'Add some expenses to get started',
-          'Try refreshing the page'
+          'Start by tracking your daily expenses',
+          'Set up basic budget categories',
+          'Begin with small savings goals'
         ]
-      });
+      };
     } finally {
       setLoading(false);
     }
@@ -406,7 +434,7 @@ const FinancialHealthDashboard: React.FC = () => {
               </h3>
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {healthData.insights.map((insight: any, index: number) => (
+                {healthData.insights.map((insight: HealthInsight, index: number) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, scale: 0.9 }}

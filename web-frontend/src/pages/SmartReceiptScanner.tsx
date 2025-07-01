@@ -27,7 +27,8 @@ const SmartReceiptScanner: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { addNotification } = useUIStore();
-  const { addExpense } = useExpenseStore();
+  const { createExpense } = useExpenseStore();
+  const { analyzeReceiptImage, analyzeReceipt: analyzeReceiptFromAIStore } = useAIStore();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -56,28 +57,15 @@ const SmartReceiptScanner: React.FC = () => {
         reader.readAsDataURL(file);
       });
 
-      // Send to backend for real OCR processing
-      const response = await fetch('/api/ai/analyze-receipt-image', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ image_data: base64 })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to process receipt image');
-      }
-
-      const result = await response.json();
+      // Use AI store method instead of direct API call
+      const extractedData = await analyzeReceiptImage(base64);
       
-      if (result.success && result.data.extractedData) {
-        setExtractedData(result.data.extractedData);
+      if (extractedData && extractedData.items) {
+        setExtractedData(extractedData);
         
         // Also set the raw text for manual editing
-        const items = result.data.extractedData.items || [];
-        const mockText = `Receipt processed successfully!\n\nStore: ${result.data.extractedData.store?.name || 'Unknown'}\nDate: ${result.data.extractedData.date || new Date().toLocaleDateString()}\n\nItems:\n${items.map((item: any) => `${item.description} - $${item.amount.toFixed(2)}`).join('\n')}\n\nTotal: $${result.data.extractedData.totals?.total?.toFixed(2) || '0.00'}`;
+        const items = extractedData.items || [];
+        const mockText = `Receipt processed successfully!\n\nStore: ${extractedData.store?.name || 'Unknown'}\nDate: ${extractedData.date || new Date().toLocaleDateString()}\n\nItems:\n${items.map((item: any) => `${item.description} - $${item.amount?.toFixed(2) || '0.00'}`).join('\n')}\n\nTotal: $${extractedData.totals?.total?.toFixed(2) || '0.00'}`;
         setReceiptText(mockText);
         
         addNotification({
@@ -103,7 +91,7 @@ const SmartReceiptScanner: React.FC = () => {
     }
   };
 
-  const analyzeReceipt = async () => {
+  const analyzeReceiptManually = async () => {
     if (!receiptText.trim()) {
       addNotification({
         type: 'error',
@@ -151,7 +139,7 @@ const SmartReceiptScanner: React.FC = () => {
 
   const saveExpense = async (expense: any) => {
     try {
-      await addExpense({
+      await expense({
         amount: expense.amount,
         description: expense.description,
         category_id: expense.category_id || 1,
@@ -286,7 +274,7 @@ const SmartReceiptScanner: React.FC = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={analyzeReceipt}
+                onClick={analyzeReceiptManually}
                 disabled={!receiptText.trim() || isScanning}
                 className="button-primary flex-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >

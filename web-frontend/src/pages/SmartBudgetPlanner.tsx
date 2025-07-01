@@ -165,13 +165,60 @@ const SmartBudgetPlanner: React.FC = () => {
 
   const generateOptimizations = async () => {
     try {
-      const optimization = await optimizeBudget();
-      if (optimization?.optimizations) {
-        setOptimizations(optimization.optimizations);
+      setIsLoading(true);
+      const currentBudgets = categoryBudgets.reduce((acc, budget) => {
+        acc[budget.category] = budget.budget;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const optimizationResult = await optimizeBudget(currentBudgets, []);
+      
+      // Handle different response formats
+      const optimizations: BudgetOptimization[] = [];
+      
+      if (optimizationResult?.optimized_budget) {
+        Object.entries(optimizationResult.optimized_budget).forEach(([category, amount]: [string, any]) => {
+          const currentBudget = currentBudgets[category] || 0;
+          const recommendedBudget = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+          
+          if (Math.abs(currentBudget - recommendedBudget) > 1) {
+            optimizations.push({
+              category,
+              currentBudget,
+              recommendedBudget,
+              reasoning: `AI recommends ${recommendedBudget > currentBudget ? 'increasing' : 'reducing'} budget based on spending patterns`,
+              potentialSavings: Math.max(0, currentBudget - recommendedBudget)
+            });
+          }
+        });
       }
+
+      // Add some default optimizations if AI doesn't return any
+      if (optimizations.length === 0 && categoryBudgets.length > 0) {
+        categoryBudgets.forEach(budget => {
+          if (budget.status === 'warning' || budget.status === 'danger') {
+            optimizations.push({
+              category: budget.category,
+              currentBudget: budget.budget,
+              recommendedBudget: budget.spent * 1.15,
+              reasoning: 'Adjust budget based on actual spending patterns',
+              potentialSavings: Math.max(0, budget.budget - (budget.spent * 1.15))
+            });
+          }
+        });
+      }
+
+      setOptimizations(optimizations);
     } catch (error) {
       console.error('Error generating optimizations:', error);
       setOptimizations([]);
+      addNotification({
+        type: 'warning',
+        title: 'AI Optimization Unavailable',
+        message: 'Continue tracking expenses for better AI recommendations'
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 

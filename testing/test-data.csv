@@ -1,0 +1,11 @@
+email,password,amount,description
+test1@example.com,password123,25.50,Coffee and breakfast
+test2@example.com,password123,45.75,Gas station fill-up
+test3@example.com,password123,12.30,Bus fare
+test4@example.com,password123,89.99,Grocery shopping
+test5@example.com,password123,15.00,Movie ticket
+test6@example.com,password123,67.45,Restaurant dinner
+test7@example.com,password123,120.00,Electricity bill
+test8@example.com,password123,8.75,Coffee shop
+test9@example.com,password123,34.20,Pharmacy visit
+test10@example.com,password123,156.80,Weekly groceries

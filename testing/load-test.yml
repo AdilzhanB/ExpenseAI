@@ -1,0 +1,171 @@
+# Artillery.js load testing configuration
+config:
+  target: 'http://localhost:3001'
+  phases:
+    # Warm up phase
+    - duration: 60
+      arrivalRate: 1
+      name: "Warm up"
+    
+    # Ramp up phase
+    - duration: 120
+      arrivalRate: 1
+      rampTo: 10
+      name: "Ramp up load"
+    
+    # Sustained load phase
+    - duration: 300
+      arrivalRate: 10
+      name: "Sustained load"
+    
+    # Spike test
+    - duration: 60
+      arrivalRate: 50
+      name: "Spike test"
+    
+    # Cool down
+    - duration: 60
+      arrivalRate: 1
+      name: "Cool down"
+
+  processor: "./load-test-functions.js"
+  
+  http:
+    timeout: 30
+    
+  payload:
+    path: "./test-data.csv"
+    fields:
+      - "email"
+      - "password"
+      - "amount"
+      - "description"
+
+scenarios:
+  # Health check scenario
+  - name: "Health Check"
+    weight: 10
+    flow:
+      - get:
+          url: "/health"
+          capture:
+            - json: "$.status"
+              as: "health_status"
+
+  # Authentication scenario
+  - name: "User Authentication"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.data.token"
+              as: "auth_token"
+          expect:
+            - statusCode: 200
+
+  # Expense management scenario
+  - name: "Expense Operations"
+    weight: 40
+    flow:
+      # Login first
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.data.token"
+              as: "auth_token"
+      
+      # Get expenses
+      - get:
+          url: "/api/expenses"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200
+      
+      # Create expense
+      - post:
+          url: "/api/expenses"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          json:
+            amount: "{{ amount }}"
+            description: "{{ description }}"
+            category_id: 1
+            date: "2024-01-15"
+          expect:
+            - statusCode: 201
+      
+      # Get categories
+      - get:
+          url: "/api/categories"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200
+
+  # AI features scenario
+  - name: "AI Features"
+    weight: 20
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.data.token"
+              as: "auth_token"
+      
+      # Get AI insights
+      - get:
+          url: "/api/ai/insights"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200
+      
+      # Get health score
+      - get:
+          url: "/api/ai/health-score"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200
+
+  # Statistics scenario
+  - name: "Statistics and Reports"
+    weight: 10
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.data.token"
+              as: "auth_token"
+      
+      # Get stats
+      - get:
+          url: "/api/expenses/stats"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200
+      
+      # Get budget status
+      - get:
+          url: "/api/budgets"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200

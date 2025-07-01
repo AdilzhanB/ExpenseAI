@@ -1,0 +1,64 @@
+{
+  "name": "ai-expense-tracker",
+  "version": "1.0.0",
+  "description": "AI-powered personal expense tracker with real-time insights",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd web-frontend && npm start",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd web-frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd web-frontend && npm test -- --watchAll=false",
+    "test:e2e": "cd testing && npm run test:e2e",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd web-frontend && npm run lint",
+    "lint:fix": "npm run lint:backend -- --fix && npm run lint:frontend -- --fix",
+    "start": "cd backend && npm start",
+    "start:prod": "docker-compose -f docker-compose.prod.yml up -d",
+    "stop:prod": "docker-compose -f docker-compose.prod.yml down",
+    "docker:dev": "docker-compose up --build",
+    "docker:prod": "docker-compose -f docker-compose.prod.yml up --build -d",
+    "setup": "./scripts/setup-dev.sh",
+    "deploy": "./scripts/deploy.sh",
+    "load-test": "cd testing && artillery run load-test.yml",
+    "backup": "docker-compose -f docker-compose.prod.yml exec db-backup sh -c 'cp /data/expense_tracker.db /backups/manual_backup_$(date +%Y%m%d_%H%M%S).db'",
+    "logs": "docker-compose -f docker-compose.prod.yml logs -f",
+    "logs:app": "docker-compose -f docker-compose.prod.yml logs -f app",
+    "health": "curl -f http://localhost/health || curl -f http://localhost:3001/health",
+    "clean": "npm run clean:backend && npm run clean:frontend && docker system prune -f",
+    "clean:backend": "cd backend && rm -rf node_modules && npm install",
+    "clean:frontend": "cd web-frontend && rm -rf node_modules && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "artillery": "^2.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/ai-expense-tracker.git"
+  },
+  "keywords": [
+    "expense-tracker",
+    "ai",
+    "personal-finance",
+    "budgeting",
+    "react",
+    "node.js",
+    "gemini-ai"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yourusername/ai-expense-tracker/issues"
+  },
+  "homepage": "https://github.com/yourusername/ai-expense-tracker#readme"
+}

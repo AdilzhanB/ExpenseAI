@@ -1,0 +1,127 @@
+# Production Docker Compose configuration
+version: '3.8'
+
+services:
+  # Application server
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      - app-data:/app/data
+      - app-uploads:/app/uploads
+      - app-logs:/app/logs
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DB_PATH=/app/data/expense_tracker.db
+      - JWT_SECRET=${JWT_SECRET}
+      - AI_ENABLED=${AI_ENABLED:-true}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - UPLOAD_DIR=/app/uploads
+      - MAX_FILE_SIZE=10485760
+      - AI_CACHE_TTL=24
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    restart: unless-stopped
+    networks:
+      - expense-tracker-network
+    healthcheck:
+      test: ["CMD", "node", "backend/src/healthcheck.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - app-logs:/var/log/nginx
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - expense-tracker-network
+
+  # Database backup service
+  db-backup:
+    image: alpine:3.18
+    volumes:
+      - app-data:/data:ro
+      - backup-data:/backups
+    environment:
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
+    command: >
+      sh -c "
+        while true; do
+          echo 'Creating database backup...'
+          timestamp=$$(date +%Y%m%d_%H%M%S)
+          cp /data/expense_tracker.db /backups/expense_tracker_$$timestamp.db
+          gzip /backups/expense_tracker_$$timestamp.db
+          echo 'Backup created: expense_tracker_$$timestamp.db.gz'
+          
+          echo 'Cleaning old backups...'
+          find /backups -name '*.db.gz' -mtime +$$BACKUP_RETENTION_DAYS -delete
+          
+          echo 'Backup completed. Next backup in 24 hours.'
+          sleep 86400
+        done
+      "
+    restart: unless-stopped
+    networks:
+      - expense-tracker-network
+
+  # Monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - expense-tracker-network
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3002:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    restart: unless-stopped
+    networks:
+      - expense-tracker-network
+
+networks:
+  expense-tracker-network:
+    driver: bridge
+
+volumes:
+  app-data:
+  app-uploads:
+  app-logs:
+  backup-data:
+  prometheus-data:
+  grafana-data:
